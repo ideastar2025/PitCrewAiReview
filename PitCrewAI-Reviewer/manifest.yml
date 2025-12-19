@@ -1,0 +1,20 @@
+modules:
+  macro:
+    - key: pitcrewai-reviewer-hello-world-macro
+      resource: main
+      render: native
+      resolver:
+        function: resolver
+      title: PitCrewAI-Reviewer
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: src/frontend/index.jsx
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/f222c893-6871-4a42-8aa9-77c9120d588f
