@@ -11,10 +11,24 @@ modules:
       handler: index.handler
 resources:
   - key: main
-    path: src/frontend/index.jsx
+    path: src/fronted/index.jsx
 app:
   runtime:
     name: nodejs24.x
     memoryMB: 256
     architecture: arm64
   id: ari:cloud:ecosystem::app/f222c893-6871-4a42-8aa9-77c9120d588f
+
+  providers:
+  auth:
+    - key: my-oauth
+      name: My OAuth Provider
+      type: oauth2
+      clientId: ${BITBUCKET_CLIENT_ID}
+      clientSecret: ${BITBUCKET_CLIENT_SECRET}
+      scopes:
+        - profile
+        - email
+      authorizationUrl: https://provider.com/oauth/authorize
+      tokenUrl: https://provider.com/oauth/token
+

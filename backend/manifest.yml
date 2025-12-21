@@ -1,0 +1,48 @@
+modules:
+  jira:issuePanel:
+    - key: pitcrew-pr-panel
+      resource: main
+      resolver:
+        function: resolver
+      title: PitCrew AI Review
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+
+  function:
+    - key: resolver
+      handler: index.handler
+    
+    - key: prWebhookHandler
+      handler: prWebhook.handler
+
+  trigger:
+    - key: bitbucket-pr-created
+      function: prWebhookHandler
+      events:
+        - avi:bitbucket:created:pullrequest
+    
+    - key: bitbucket-pr-updated
+      function: prWebhookHandler
+      events:
+        - avi:bitbucket:updated:pullrequest
+
+resources:
+  - key: main
+    path: static/jira-panel/build
+
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - read:bitbucket-repository
+    - read:bitbucket-pullrequest
+    - write:bitbucket-pullrequest
+    - storage:app
+
+app:
+  id: ari:cloud:ecosystem::app/YOUR_APP_ID
+  
+  runtime:
+    name: nodejs18.x
+  
+  ai:
+    enabled: true
