@@ -1,6 +1,6 @@
 # Backend/reviews/models.py
 from django.db import models
-from backend.repos.models import Repository
+from repos.models import Repository
 
 class PullRequest(models.Model):
     STATUS_CHOICES = [

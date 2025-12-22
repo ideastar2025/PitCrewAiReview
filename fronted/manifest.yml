@@ -5,7 +5,7 @@ modules:
       resolver:
         function: resolver
       title: PitCrew AI Review
-      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      icon: https://www.shutterstock.com/image-vector/cybersecurity-lock-icon-representing-digital-600nw-2511442247.jpg
 
   function:
     - key: resolver

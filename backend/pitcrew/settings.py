@@ -25,7 +25,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_celery_beat',
     
     # Third party apps
     'rest_framework',
@@ -35,10 +34,10 @@ INSTALLED_APPS = [
     'django_celery_results',
     
     # Local apps
-    'apps.auth_app',
-    'apps.repos',
-    'apps.reviews',
-    'apps.webhooks',
+    'auth_app',
+    'repos',
+    'reviews',
+    'webhooks',
 ]
 
 MIDDLEWARE = [
