@@ -25,7 +25,7 @@ const LoadingSpinner = ({
     white: 'text-white'
   };
 
-  const content = (
+  const contents = (
     <div className="flex flex-col items-center justify-center space-y-3">
       <Loader2 className={`${sizeClasses[size]} ${colorClasses[color]} animate-spin`} />
       {message && (
@@ -37,7 +37,7 @@ const LoadingSpinner = ({
   if (fullScreen) {
     return (
       <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
-        {content}
+        {contents}
       </div>
     );
   }
@@ -72,7 +72,7 @@ export const SkeletonLoader = ({ lines = 3, avatar = false }) => {
 };
 
 // Card skeleton
-export const CardSkeleton = () => {
+export const CardSkeletons = () => {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
       <div className="flex items-start justify-between mb-4">

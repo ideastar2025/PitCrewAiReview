@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import PullRequest, AIReview, ReviewIssue
-from repos.serializers import RepositorySerializer
+from apps.repos.serializers import RepositorySerializer  # CHANGED from 'repos.serializers'
 
 
 class ReviewIssueSerializer(serializers.ModelSerializer):

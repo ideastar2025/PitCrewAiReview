@@ -17,7 +17,7 @@ import {
 // import RiskScoreCard from './RiskScoreCard';
 
 const PRPanel = ({ pr, onViewDetails, className = '' }) => {
-  const [expanded, setExpanded] = useState(false);
+  const [expand, setExpand] = useState(false);
 
   // Default PR structure if not provided
   const defaultPR = {
@@ -193,7 +193,7 @@ const PRPanel = ({ pr, onViewDetails, className = '' }) => {
       </div>
 
       {/* Expandable Details */}
-      {expanded && (
+      {expand && (
         <div className="p-6 border-b border-gray-100 bg-gray-50">
           {/* Reviewers */}
           <div className="mb-4">

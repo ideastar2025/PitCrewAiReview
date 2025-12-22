@@ -1,5 +1,5 @@
 from django.db import models
-from repos.models import Repository
+from apps.repos.models import Repository  # CHANGED from 'repos.models'
 
 
 class PullRequest(models.Model):

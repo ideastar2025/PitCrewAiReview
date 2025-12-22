@@ -2,6 +2,13 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import PullRequest, AIReview, ReviewIssue
 
+# ... rest of the file remains the same
+
+
+from django.contrib import admin
+from django.utils.html import format_html
+from .models import PullRequest, AIReview, ReviewIssue
+
 
 @admin.register(PullRequest)
 class PullRequestAdmin(admin.ModelAdmin):

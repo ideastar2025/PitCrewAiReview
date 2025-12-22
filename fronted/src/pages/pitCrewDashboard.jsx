@@ -3,13 +3,13 @@ import { BarChart3, GitPullRequest, AlertTriangle, CheckCircle2, TrendingUp, Clo
 
 const PitCrewDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [prReviews, setPrReviews] = useState([]);
+  const [prReview, setPrReview] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Simulate loading PR reviews
     setTimeout(() => {
-      setPrReviews([
+      setPrReview([
         {
           id: 1,
           title: "Add user authentication module",
@@ -51,7 +51,7 @@ const PitCrewDashboard = () => {
     }, 1000);
   }, []);
 
-  const getRiskColor = (score) => {
+  const getRiskColors = (score) => {
     if (score >= 70) return 'text-red-600 bg-red-50 border-red-200';
     if (score >= 40) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
     return 'text-green-600 bg-green-50 border-green-200';
@@ -167,7 +167,7 @@ const PitCrewDashboard = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
             </div>
           ) : (
-            prReviews.map((pr) => {
+            prReview.map((pr) => {
               const riskBadge = getRiskBadge(pr.riskScore);
               return (
                 <div
