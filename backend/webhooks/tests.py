@@ -233,7 +233,7 @@ class AIAnalyzerTestCase(TestCase):
 class UtilsTestCase(TestCase):
     def test_extract_files_from_diff(self):
         """Test extracting files from diff"""
-        from apps.webhooks.utils import extract_files_from_diff
+        from backend.webhooks.ultis import extract_files_from_diff
         
         diff = """diff --git a/file1.py b/file1.py
 index abc123..def456 100644
@@ -253,7 +253,7 @@ new file mode 100644"""
     
     def test_count_changes_in_diff(self):
         """Test counting changes in diff"""
-        from apps.webhooks.utils import count_changes_in_diff
+        from backend.webhooks.ultis import count_changes_in_diff
         
         diff = """+added line 1
 +added line 2

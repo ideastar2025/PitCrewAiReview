@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     # Local apps
     'auth_app',
     'repos',
-    'reviews',
+     'reviews',
     'webhooks',
 ]
 

@@ -109,3 +109,22 @@ INFO 2025-12-22 15:53:58,300 autoreload Watching for file changes with StatReloa
 INFO 2025-12-22 15:54:02,035 autoreload E:\PitCrewAiReview\backend\pitcrew\__init__.py changed, reloading.
 INFO 2025-12-22 15:54:06,118 autoreload Watching for file changes with StatReloader
 INFO 2025-12-22 16:21:47,498 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:44:40,116 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:47:25,584 autoreload E:\PitCrewAiReview\backend\reviews\__init__.py changed, reloading.
+INFO 2025-12-22 16:47:30,047 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:47:38,826 autoreload E:\PitCrewAiReview\backend\reviews\__init__.py changed, reloading.
+INFO 2025-12-22 16:47:43,139 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:48:07,200 autoreload E:\PitCrewAiReview\backend\apps\reviews\__init__.py changed, reloading.
+INFO 2025-12-22 16:48:12,080 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:48:18,234 autoreload E:\PitCrewAiReview\backend\auth_app\__init__.py changed, reloading.
+INFO 2025-12-22 16:48:24,000 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:48:26,851 autoreload E:\PitCrewAiReview\backend\auth_app\__init__.py changed, reloading.
+INFO 2025-12-22 16:48:31,049 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:49:47,661 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:51:52,339 autoreload E:\PitCrewAiReview\backend\pitcrew\settings.py changed, reloading.
+INFO 2025-12-22 16:51:57,726 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:52:09,021 autoreload E:\PitCrewAiReview\backend\pitcrew\settings.py changed, reloading.
+INFO 2025-12-22 16:52:11,667 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:52:37,770 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 16:56:15,667 autoreload Watching for file changes with StatReloader
+INFO 2025-12-22 17:15:03,911 autoreload Watching for file changes with StatReloader

@@ -186,3 +186,26 @@ def logout_user(request):
             {'error': str(e)},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+from django.http import JsonResponse
+from django.contrib.auth import logout
+
+# GitHub OAuth callback
+def github_login(request):
+    return JsonResponse({"message": "GitHub login callback"})  # placeholder logic
+
+# Bitbucket OAuth callback
+def bitbucket_login(request):
+    return JsonResponse({"message": "Bitbucket login callback"})  # placeholder logic
+
+# Current logged-in user
+def get_current_user(request):
+    user = request.user
+    if user.is_authenticated:
+        return JsonResponse({"username": user.username, "email": user.email})
+    return JsonResponse({"error": "Not authenticated"}, status=401)
+
+# Logout
+def logout_user(request):
+    logout(request)
+    return JsonResponse({"message": "Logged out"})

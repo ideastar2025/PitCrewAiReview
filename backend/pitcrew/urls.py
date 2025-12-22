@@ -9,14 +9,14 @@ from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 
 # Import viewsets
-from backend.repos.views import RepositoryViewSet
-from backend.reviews.views import PullRequestViewSet, AIReviewViewSet
+from repos.views import RepositoryViewSet
+from reviews.views import PullRequestViewSet, AIReviewViewSet
 
 # Create router
 router = DefaultRouter()
 router.register(r'repositories', RepositoryViewSet, basename='repository')
-router.register(r'pull-requests', PullRequestViewSet, basename='pullrequest')
-router.register(r'reviews', AIReviewViewSet, basename='review')
+router.register(r'pull_requests', PullRequestViewSet, basename='pullrequest')
+router.register(r'ai_reviews', AIReviewViewSet, basename='review')
 
 urlpatterns = [
     # Admin
@@ -26,6 +26,8 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/auth/', include('apps.auth_app.urls')),
     path('api/webhooks/', include('apps.webhooks.urls')),
+        path('api/repos/', include('apps.repos.urls')),
+    path('api/reviews/', include('apps.reviews.urls')),
     
     # API documentation (optional)
     # path('api/docs/', include('rest_framework.urls')),

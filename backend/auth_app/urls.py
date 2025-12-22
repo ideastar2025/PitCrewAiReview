@@ -13,24 +13,3 @@ urlpatterns = [
 ]
 
 
-# ============================================
-# apps/auth_app/__init__.py
-# ============================================
-
-default_app_config = 'apps.auth_app.apps.AuthAppConfig'
-
-
-# ============================================
-# apps/auth_app/apps.py
-# ============================================
-
-from django.apps import AppConfig
-
-
-class AuthAppConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.auth_app'
-    verbose_name = 'Authentication'
-    
-    def ready(self):
-        import backend.auth_app.models  # noqa
