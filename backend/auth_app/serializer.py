@@ -1,28 +1,43 @@
-# ============================================
 # apps/auth_app/serializers.py
 # ============================================
 
 from rest_framework import serializers
-from django.contrib.auth.models import User
-from .models import UserProfile
+from django.contrib.auth import get_user_model
 
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    """Serializer for user profile"""
-    
-    class Meta:
-        model = UserProfile
-        fields = ['provider', 'provider_id', 'avatar_url', 'created_at']
-        read_only_fields = ['created_at']
+User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer for user with profile"""
-    
-    profile = UserProfileSerializer(read_only=True)
-    
+    """
+    Serializer for the User model.
+    Used to serialize and deserialize user data.
+    """
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'profile']
-        read_only_fields = ['id']
+        fields = [
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'is_active',
+            'date_joined',
+        ]
+        read_only_fields = ['id', 'is_active', 'date_joined']
 
+
+class AuthLoginSerializer(serializers.Serializer):
+    """
+    Serializer for login via third-party services (e.g., GitHub, Bitbucket).
+    This serializer can be extended if you want to accept auth tokens from frontend.
+    """
+    code = serializers.CharField(required=True, help_text="Authorization code from provider")
+
+
+class AuthTokenSerializer(serializers.Serializer):
+    """
+    Serializer for returning authentication token after login.
+    """
+    token = serializers.CharField(read_only=True)
+    user = UserSerializer(read_only=True)

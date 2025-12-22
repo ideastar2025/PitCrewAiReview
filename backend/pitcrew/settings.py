@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'repos',
      'reviews',
     'webhooks',
+    'apps.webhooks.urls',
 ]
 
 MIDDLEWARE = [
