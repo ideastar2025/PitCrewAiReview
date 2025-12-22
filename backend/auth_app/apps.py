@@ -1,14 +1,12 @@
-# ============================================
-# apps/auth_app/apps.py
-# ============================================
-
+# backend/auth_app/apps.py
 from django.apps import AppConfig
 
 
 class AuthAppConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.auth_app'
+    name = 'auth_app'
     verbose_name = 'Authentication'
     
     def ready(self):
-        import apps.auth_app.models  # noqa
+        # Import signals if needed
+        import auth_app.models  # noqa

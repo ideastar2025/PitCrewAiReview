@@ -1,3 +1,4 @@
+# backend/pitcrew/settings.py
 """
 Django settings for PitCrew AI project.
 """
@@ -30,15 +31,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    'django_celery_beat',
-    'django_celery_results',
     
-    # Local apps
+    # Local apps - ADD ALL OF THEM HERE
     'auth_app',
     'repos',
-     'reviews',
+    'reviews',      # THIS WAS MISSING!
     'webhooks',
-    'apps.webhooks.urls',
 ]
 
 MIDDLEWARE = [
@@ -71,7 +69,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'pitcrew.wsgi.application'
-ASGI_APPLICATION = 'pitcrew.asgi.application'
 
 # Database
 DATABASES = {
@@ -110,7 +107,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = []
 
 # Media files
 MEDIA_URL = '/media/'
@@ -132,19 +129,28 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
     ],
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
     ],
-    'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
 }
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in development
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    'CORS_ALLOWED_ORIGINS', 
-    'http://localhost:3000,http://localhost:5173'
-).split(',')
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173',
+]
+
+if DEBUG:
+    # More permissive in development
+    CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -159,38 +165,26 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # GitHub OAuth
-GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
-GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET')
+GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID', '')
+GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET', '')
 GITHUB_REDIRECT_URI = os.environ.get('GITHUB_REDIRECT_URI', 'http://localhost:3000/auth/callback')
+GITHUB_WEBHOOK_SECRET = os.environ.get('GITHUB_WEBHOOK_SECRET', '')
 
 # Bitbucket OAuth
-BITBUCKET_CLIENT_ID = os.environ.get('BITBUCKET_CLIENT_ID')
-BITBUCKET_CLIENT_SECRET = os.environ.get('BITBUCKET_CLIENT_SECRET')
+BITBUCKET_CLIENT_ID = os.environ.get('BITBUCKET_CLIENT_ID', '')
+BITBUCKET_CLIENT_SECRET = os.environ.get('BITBUCKET_CLIENT_SECRET', '')
 BITBUCKET_REDIRECT_URI = os.environ.get('BITBUCKET_REDIRECT_URI', 'http://localhost:3000/auth/callback')
+BITBUCKET_WEBHOOK_SECRET = os.environ.get('BITBUCKET_WEBHOOK_SECRET', '')
 
 # Anthropic API
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514')
 
-# Celery Configuration
-CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
-
-# Cache Configuration
+# Cache Configuration (Simple cache for development)
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'KEY_PREFIX': 'pitcrew',
-        'TIMEOUT': 300,
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'pitcrew-cache',
     }
 }
 
@@ -225,7 +219,22 @@ LOGGING = {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
-        'apps': {
+        'auth_app': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'repos': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'reviews': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'webhooks': {
             'handlers': ['console', 'file'],
             'level': 'DEBUG',
             'propagate': False,
