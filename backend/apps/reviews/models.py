@@ -1,15 +1,15 @@
-# backend/reviews/models.py
 from django.db import models
 from repos.models import Repository
 
 
 class PullRequest(models.Model):
-    """Pull Request model"""
+    """Model for Pull Requests"""
     
     STATUS_CHOICES = [
         ('open', 'Open'),
-        ('closed', 'Closed'),
         ('merged', 'Merged'),
+        ('closed', 'Closed'),
+        ('draft', 'Draft'),
     ]
     
     repository = models.ForeignKey(
@@ -33,8 +33,8 @@ class PullRequest(models.Model):
         unique_together = ['repository', 'pr_number']
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['repository', 'status']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['repository', '-created_at']),
+            models.Index(fields=['status']),
         ]
     
     def __str__(self):
@@ -42,7 +42,7 @@ class PullRequest(models.Model):
 
 
 class AIReview(models.Model):
-    """AI Review for Pull Request"""
+    """Model for AI-generated reviews of pull requests"""
     
     pull_request = models.OneToOneField(
         PullRequest,
@@ -52,23 +52,24 @@ class AIReview(models.Model):
     risk_score = models.IntegerField(default=0)  # 0-100
     summary = models.TextField()
     deployment_ready = models.BooleanField(default=False)
-    analysis_data = models.JSONField(default=dict)  # Store full analysis
+    analysis_data = models.JSONField(default=dict)  # Store full AI response
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         db_table = 'ai_reviews'
         ordering = ['-created_at']
         indexes = [
+            models.Index(fields=['-created_at']),
             models.Index(fields=['risk_score']),
             models.Index(fields=['deployment_ready']),
         ]
     
     def __str__(self):
-        return f"Review for {self.pull_request}"
+        return f"Review for PR #{self.pull_request.pr_number} (Risk: {self.risk_score})"
 
 
 class ReviewIssue(models.Model):
-    """Individual issue found in review"""
+    """Model for individual issues found in AI review"""
     
     SEVERITY_CHOICES = [
         ('high', 'High'),
@@ -93,6 +94,7 @@ class ReviewIssue(models.Model):
         ordering = ['-severity', 'file_path']
         indexes = [
             models.Index(fields=['ai_review', 'severity']),
+            models.Index(fields=['severity']),
         ]
     
     def __str__(self):

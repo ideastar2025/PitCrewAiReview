@@ -51,8 +51,8 @@ class PullRequestViewSet(viewsets.ModelViewSet):
         
         try:
             # Import here to avoid circular imports
-            from backend.webhooks.ai_analyzer import analyze_pr_with_ai
-            from backend.webhooks.ultis import fetch_pr_diff
+            from apps.webhooks.ai_analyzer import analyze_pr_with_ai
+            from apps.webhooks.ultis import fetch_pr_diff
             
             # Fetch PR diff
             diff_content = fetch_pr_diff(pr)
@@ -105,7 +105,7 @@ class PullRequestViewSet(viewsets.ModelViewSet):
         pr = self.get_object()
         
         try:
-            from apps.webhooks.utils import fetch_pr_diff
+            from apps.webhooks.ultis import fetch_pr_diff
             diff_content = fetch_pr_diff(pr)
             
             if diff_content:

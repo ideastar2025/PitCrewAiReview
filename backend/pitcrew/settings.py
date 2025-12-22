@@ -31,12 +31,14 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'django_celery_beat',
+    'django_celery_results',
     
-    # Local apps - ADD ALL OF THEM HERE
-    'auth_app',
-    'repos',
-    'reviews',      # THIS WAS MISSING!
-    'webhooks',
+    # Local apps
+    'apps.auth_app',
+    'apps.repos',
+    'apps.reviews',
+    'apps.webhooks',
 ]
 
 MIDDLEWARE = [
