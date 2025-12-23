@@ -9,27 +9,56 @@ modules:
   function:
     - key: resolver
       handler: index.handler
+
 resources:
   - key: main
     path: src/fronted/index.jsx
+
+# Permissions for API calls
+permissions:
+  scopes:
+    - 'read:jira-work'
+    - 'write:jira-work'
+    - 'read:bitbucket-workspace'
+    - 'read:bitbucket-repository'
+    - 'write:bitbucket-repository'
+  external:
+    fetch:
+      backend:
+        - 'https://api.anthropic.com'
+      client:
+        - 'https://api.bitbucket.org'
+        - 'https://bitbucket.org'
+
+# OAuth configuration (moved outside 'app')
+auth:
+  - key: bitbucket-oauth
+    name: Bitbucket OAuth
+    type: oauth2
+    clientId: ${BITBUCKET_CLIENT_ID}
+    clientSecret: ${BITBUCKET_CLIENT_SECRET}
+    scopes:
+      - repository
+      - repository:write
+      - pullrequest
+      - pullrequest:write
+      - webhook
+    authorizationUrl: https://bitbucket.org/site/oauth2/authorize
+    tokenUrl: https://bitbucket.org/site/oauth2/access_token
+
+# Environment variables
+environmentVariables:
+  BITBUCKET_CLIENT_ID:
+    type: plain
+  BITBUCKET_CLIENT_SECRET:
+    type: secret
+  ANTHROPIC_API_KEY:
+    type: secret
+
 app:
   runtime:
     name: nodejs24.x
     memoryMB: 256
     architecture: arm64
   id: ari:cloud:ecosystem::app/f222c893-6871-4a42-8aa9-77c9120d588f
-
-  providers:
-  auth:
-    - key: my-oauth
-      name: My OAuth Provider
-      type: oauth2
-      clientId: ${BITBUCKET_CLIENT_ID}
-      clientSecret: ${BITBUCKET_CLIENT_SECRET}
-      scopes:
-        - profile
-        - email
-      authorizationUrl: https://provider.com/oauth/authorize
-      tokenUrl: https://provider.com/oauth/token
-
-
+  

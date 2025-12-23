@@ -1,7 +1,26 @@
-// Authentication utility functions
+// Authentication utility functions for PitCrew AI Review
+
+// Environment variables - supports both Vite and CRA
+const getEnvVar = (key) => {
+  // Try Vite first (import.meta.env)
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env[`VITE_${key}`];
+  }
+  // Fallback to Create React App (process.env)
+  return process.env[`REACT_APP_${key}`];
+};
+
+const GITHUB_CLIENT_ID = getEnvVar('GITHUB_CLIENT_ID');
+const BITBUCKET_CLIENT_ID = getEnvVar('BITBUCKET_CLIENT_ID');
+const API_URL = getEnvVar('API_URL') || 'http://localhost:8000';
+const REDIRECT_URI = getEnvVar('REDIRECT_URI') || `${window.location.origin}/auth/callback`;
 
 // Token management
 export const setAuthToken = (token) => {
+  if (!token) {
+    console.error('Attempted to set null/undefined token');
+    return;
+  }
   localStorage.setItem('token', token);
 };
 
@@ -20,21 +39,33 @@ export const isAuthenticated = () => {
   // Check if token is expired
   try {
     const payload = parseJWT(token);
+    if (!payload || !payload.exp) return false;
+    
     const currentTime = Math.floor(Date.now() / 1000);
     return payload.exp > currentTime;
-  } catch {
+  } catch (error) {
+    console.error('Token validation error:', error);
     return false;
   }
 };
 
 // User data management
 export const setUser = (user) => {
+  if (!user) {
+    console.error('Attempted to set null/undefined user');
+    return;
+  }
   localStorage.setItem('user', JSON.stringify(user));
 };
 
 export const getUser = () => {
-  const user = localStorage.getItem('user');
-  return user ? JSON.parse(user) : null;
+  try {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  } catch (error) {
+    console.error('Failed to parse user data:', error);
+    return null;
+  }
 };
 
 export const removeUser = () => {
@@ -44,7 +75,16 @@ export const removeUser = () => {
 // JWT parsing
 export const parseJWT = (token) => {
   try {
-    const base64Url = token.split('.')[1];
+    if (!token || typeof token !== 'string') {
+      throw new Error('Invalid token format');
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Invalid JWT structure');
+    }
+
+    const base64Url = parts[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const jsonPayload = decodeURIComponent(
       atob(base64)
@@ -60,28 +100,37 @@ export const parseJWT = (token) => {
 };
 
 // OAuth helpers
-export const getOAuthUrl = (provider) => {
+export const getOAuthUrl = (provider = 'github') => {
   const baseUrls = {
     github: 'https://github.com/login/oauth/authorize',
     bitbucket: 'https://bitbucket.org/site/oauth2/authorize',
   };
 
   const clientIds = {
-    github: process.env.REACT_APP_GITHUB_CLIENT_ID,
-    bitbucket: process.env.REACT_APP_BITBUCKET_CLIENT_ID,
+    github: GITHUB_CLIENT_ID,
+    bitbucket: BITBUCKET_CLIENT_ID,
   };
 
-  const redirectUri = `${window.location.origin}/auth/callback`;
   const clientId = clientIds[provider];
 
-  if (!clientId) {
-    throw new Error(`Missing client ID for provider: ${provider}`);
+  // Validate client ID
+  if (!clientId || clientId === 'undefined') {
+    const errorMsg = `Missing or invalid client ID for ${provider}. Please check your .env file for VITE_${provider.toUpperCase()}_CLIENT_ID`;
+    console.error(errorMsg);
+    throw new Error(errorMsg);
   }
 
+  // Add state for CSRF protection
+  const state = setOAuthState();
+  
+  // Store provider
+  setAuthProvider(provider);
+
   if (provider === 'github') {
-    return `${baseUrls.github}?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,user`;
+    const scope = 'repo user:email read:user';
+    return `${baseUrls.github}?client_id=${clientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scope)}&state=${state}`;
   } else if (provider === 'bitbucket') {
-    return `${baseUrls.bitbucket}?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}`;
+    return `${baseUrls.bitbucket}?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${state}`;
   }
 
   throw new Error(`Unsupported provider: ${provider}`);
@@ -92,6 +141,16 @@ export const extractAuthCode = () => {
   return params.get('code');
 };
 
+export const extractAuthError = () => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('error') || params.get('error_description');
+};
+
+export const extractAuthState = () => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('state');
+};
+
 export const getAuthProvider = () => {
   // Determine provider from stored data or URL
   const params = new URLSearchParams(window.location.search);
@@ -100,6 +159,43 @@ export const getAuthProvider = () => {
 
 export const setAuthProvider = (provider) => {
   localStorage.setItem('auth_provider', provider);
+};
+
+// API helpers
+export const getApiUrl = () => API_URL;
+
+export const getRedirectUri = () => REDIRECT_URI;
+
+export const getClientId = (provider = 'github') => {
+  return provider === 'github' ? GITHUB_CLIENT_ID : BITBUCKET_CLIENT_ID;
+};
+
+// Validate environment configuration
+export const validateEnvironment = () => {
+  const errors = [];
+  
+  if (!GITHUB_CLIENT_ID || GITHUB_CLIENT_ID === 'undefined') {
+    errors.push('VITE_GITHUB_CLIENT_ID is not configured');
+  }
+  
+  if (!API_URL) {
+    errors.push('VITE_API_URL is not configured');
+  }
+  
+  if (!REDIRECT_URI) {
+    errors.push('VITE_REDIRECT_URI is not configured');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    config: {
+      GITHUB_CLIENT_ID: GITHUB_CLIENT_ID ? '✓ Set' : '✗ Missing',
+      BITBUCKET_CLIENT_ID: BITBUCKET_CLIENT_ID ? '✓ Set' : '✗ Missing',
+      API_URL: API_URL || '✗ Missing',
+      REDIRECT_URI: REDIRECT_URI || '✗ Missing',
+    }
+  };
 };
 
 // Permission checks
@@ -114,28 +210,58 @@ export const hasRole = (user, role) => {
 };
 
 // Session management
-export const initSession = (token, user) => {
+export const initSession = (token, user, provider = 'github') => {
   setAuthToken(token);
   setUser(user);
-  setAuthProvider(user.provider || 'github');
+  setAuthProvider(provider);
+  
+  // Log successful authentication
+  console.log('Session initialized for user:', user.username || user.email);
 };
 
 export const clearSession = () => {
   removeAuthToken();
   removeUser();
   localStorage.removeItem('auth_provider');
+  sessionStorage.clear();
+  
+  console.log('Session cleared');
 };
 
 export const refreshSession = async () => {
   const token = getAuthToken();
-  if (!token) return false;
+  if (!token) {
+    console.log('No token found for refresh');
+    return false;
+  }
 
   try {
-    // In a real app, you'd call a refresh endpoint
-    // const response = await fetch('/api/auth/refresh', { ... });
+    const response = await fetch(`${API_URL}/api/auth/refresh/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.token) {
+        setAuthToken(data.token);
+        return true;
+      }
+    }
+    
+    // If refresh fails, check if current token is still valid
     return isAuthenticated();
   } catch (error) {
     console.error('Failed to refresh session:', error);
+    
+    // If refresh fails but token is still valid, keep session
+    if (isAuthenticated()) {
+      return true;
+    }
+    
     clearSession();
     return false;
   }
@@ -152,6 +278,12 @@ export const generateState = () => {
 export const validateState = (state) => {
   const storedState = sessionStorage.getItem('oauth_state');
   sessionStorage.removeItem('oauth_state');
+  
+  if (!state || !storedState) {
+    console.warn('Missing state parameter for validation');
+    return false;
+  }
+  
   return state === storedState;
 };
 
@@ -227,6 +359,82 @@ export const redirectAfterLogin = (navigate) => {
   navigate(path);
 };
 
+// Handle OAuth callback
+export const handleOAuthCallback = async (navigate) => {
+  const code = extractAuthCode();
+  const state = extractAuthState();
+  const error = extractAuthError();
+  const provider = getAuthProvider();
+
+  // Check for errors from OAuth provider
+  if (error) {
+    console.error('OAuth error:', error);
+    return {
+      success: false,
+      error: `Authentication failed: ${error}`
+    };
+  }
+
+  // Validate code exists
+  if (!code) {
+    return {
+      success: false,
+      error: 'No authorization code received'
+    };
+  }
+
+  // Validate CSRF state
+  if (!validateState(state)) {
+    console.error('State validation failed - possible CSRF attack');
+    return {
+      success: false,
+      error: 'Security validation failed. Please try again.'
+    };
+  }
+
+  try {
+    // Exchange code for token
+    const response = await fetch(`${API_URL}/api/auth/${provider}/callback/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.detail || 'Authentication failed');
+    }
+
+    const data = await response.json();
+
+    // Validate response data
+    if (!data.token || !data.user) {
+      throw new Error('Invalid response from server');
+    }
+
+    // Initialize session
+    initSession(data.token, data.user, provider);
+
+    // Redirect to intended page
+    redirectAfterLogin(navigate);
+
+    return {
+      success: true,
+      user: data.user
+    };
+
+  } catch (error) {
+    console.error('OAuth callback error:', error);
+    return {
+      success: false,
+      error: error.message || 'Authentication failed'
+    };
+  }
+};
+
+// Export default object with all functions
 export default {
   // Token management
   setAuthToken,
@@ -245,8 +453,17 @@ export default {
   // OAuth
   getOAuthUrl,
   extractAuthCode,
+  extractAuthError,
+  extractAuthState,
   getAuthProvider,
   setAuthProvider,
+  handleOAuthCallback,
+  
+  // Config
+  getApiUrl,
+  getRedirectUri,
+  getClientId,
+  validateEnvironment,
   
   // Permissions
   hasPermission,
