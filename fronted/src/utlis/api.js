@@ -1,9 +1,9 @@
 // API Base Configuration
-const API_BASE_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 // Helper function to get auth token
 const getAuthToken = () => {
-  return localStorage.getItem('token');
+  return localStorage.getItem('access_token');
 };
 
 // Helper function to create headers
@@ -15,7 +15,7 @@ const createHeaders = (includeAuth = true) => {
   if (includeAuth) {
     const token = getAuthToken();
     if (token) {
-      headers['Authorization'] = `Token ${token}`;
+      headers['Authorization'] = `Bearer ${token}`;
     }
   }
 
@@ -42,7 +42,16 @@ const apiRequest = async (endpoint, options = {}) => {
 
     if (!response.ok) {
       const error = isJson ? await response.json() : { message: response.statusText };
-      throw new Error(error.message || `HTTP ${response.status}: ${response.statusText}`);
+      
+      // Handle 401 Unauthorized - token expired or invalid
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      throw new Error(error.message || error.detail || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     return isJson ? await response.json() : await response.text();
@@ -59,8 +68,8 @@ const apiRequest = async (endpoint, options = {}) => {
 export const login = async (provider) => {
   // Redirect to OAuth flow
   const clientId = provider === 'github'
-    ? import.meta.env.REACT_APP_GITHUB_CLIENT_ID
-    : import.meta.env.REACT_APP_BITBUCKET_CLIENT_ID;
+    ? import.meta.env.VITE_GITHUB_CLIENT_ID || import.meta.env.REACT_APP_GITHUB_CLIENT_ID
+    : import.meta.env.VITE_BITBUCKET_CLIENT_ID || import.meta.env.REACT_APP_BITBUCKET_CLIENT_ID;
 
   const redirectUri = `${window.location.origin}/auth/callback`;
   const authUrl = provider === 'github'
@@ -84,7 +93,7 @@ export const logout = async () => {
       method: 'POST',
     });
   } finally {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('user');
   }
 };
@@ -110,49 +119,7 @@ export const getDashboardStats = async (timeRange = '7d') => {
 // ============================================
 
 export const getRepos = async () => {
-  // Mock data for demonstration
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        {
-          id: 1,
-          name: 'frontend-app',
-          fullName: 'company/frontend-app',
-          provider: 'github',
-          isActive: true,
-          url: 'https://github.com/company/frontend-app',
-          prsReviewed: 24,
-          issuesFound: 12,
-          lastSync: '2 hours ago',
-          createdAt: '2024-01-15'
-        },
-        {
-          id: 2,
-          name: 'backend-api',
-          fullName: 'company/backend-api',
-          provider: 'bitbucket',
-          isActive: true,
-          url: 'https://bitbucket.org/company/backend-api',
-          prsReviewed: 18,
-          issuesFound: 8,
-          lastSync: '5 hours ago',
-          createdAt: '2024-01-10'
-        },
-        {
-          id: 3,
-          name: 'mobile-app',
-          fullName: 'company/mobile-app',
-          provider: 'github',
-          isActive: false,
-          url: 'https://github.com/company/mobile-app',
-          prsReviewed: 0,
-          issuesFound: 0,
-          lastSync: 'Never',
-          createdAt: '2024-02-01'
-        }
-      ]);
-    }, 500);
-  });
+  return apiRequest('/repositories/');
 };
 
 export const getAvailableRepos = async (provider = 'github') => {
@@ -285,11 +252,16 @@ export const exportReport = async (format = 'pdf', filters = {}) => {
   const token = getAuthToken();
   const response = await fetch(url, {
     headers: {
-      'Authorization': `Token ${token}`,
+      'Authorization': `Bearer ${token}`,
     },
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
     throw new Error('Failed to export report');
   }
 
@@ -318,12 +290,17 @@ export const uploadFile = async (file, type = 'avatar') => {
   const response = await fetch(`${API_BASE_URL}/upload/`, {
     method: 'POST',
     headers: {
-      'Authorization': `Token ${token}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: formData,
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
     throw new Error('Failed to upload file');
   }
 
@@ -337,7 +314,7 @@ export const uploadFile = async (file, type = 'avatar') => {
 export const handleApiError = (error) => {
   if (error.message.includes('401') || error.message.includes('Unauthorized')) {
     // Token expired or invalid - redirect to login
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     window.location.href = '/login';
   }
@@ -352,6 +329,31 @@ export const handleApiError = (error) => {
   }
   
   return error.message || 'Something went wrong';
+};
+
+// ============================================
+// Axios-style API instance (for compatibility)
+// ============================================
+
+// Create an axios-like API object for easy migration
+export const api = {
+  get: (url, config = {}) => apiRequest(url, { method: 'GET', ...config }),
+  post: (url, data, config = {}) => apiRequest(url, { 
+    method: 'POST', 
+    body: JSON.stringify(data),
+    ...config 
+  }),
+  put: (url, data, config = {}) => apiRequest(url, { 
+    method: 'PUT', 
+    body: JSON.stringify(data),
+    ...config 
+  }),
+  patch: (url, data, config = {}) => apiRequest(url, { 
+    method: 'PATCH', 
+    body: JSON.stringify(data),
+    ...config 
+  }),
+  delete: (url, config = {}) => apiRequest(url, { method: 'DELETE', ...config }),
 };
 
 export default {
@@ -403,4 +405,7 @@ export default {
   
   // Error handling
   handleApiError,
+  
+  // Axios-style API
+  api,
 };

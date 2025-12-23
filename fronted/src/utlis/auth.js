@@ -15,21 +15,22 @@ const BITBUCKET_CLIENT_ID = getEnvVar('BITBUCKET_CLIENT_ID');
 const API_URL = getEnvVar('API_URL') || 'http://localhost:8000';
 const REDIRECT_URI = getEnvVar('REDIRECT_URI') || `${window.location.origin}/auth/callback`;
 
+
 // Token management
 export const setAuthToken = (token) => {
   if (!token) {
     console.error('Attempted to set null/undefined token');
     return;
   }
-  localStorage.setItem('token', token);
+  localStorage.setItem('access_token', token);
 };
 
 export const getAuthToken = () => {
-  return localStorage.getItem('token');
+  return localStorage.getItem('access_token');
 };
 
 export const removeAuthToken = () => {
-  localStorage.removeItem('token');
+  localStorage.removeItem('access_token');
 };
 
 export const isAuthenticated = () => {
@@ -48,6 +49,8 @@ export const isAuthenticated = () => {
     return false;
   }
 };
+
+
 
 // User data management
 export const setUser = (user) => {
@@ -175,7 +178,7 @@ export const validateEnvironment = () => {
   const errors = [];
   
   if (!GITHUB_CLIENT_ID || GITHUB_CLIENT_ID === 'undefined') {
-    errors.push('VITE_GITHUB_CLIENT_ID is not configured');
+    errors.push('GITHUB_CLIENT_ID is not configured');
   }
   
   if (!API_URL) {
@@ -183,7 +186,7 @@ export const validateEnvironment = () => {
   }
   
   if (!REDIRECT_URI) {
-    errors.push('VITE_REDIRECT_URI is not configured');
+    errors.push('GITHUB_REDIRECT_URI is not configured');
   }
 
   return {
@@ -240,7 +243,7 @@ export const refreshSession = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Token ${token}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -359,6 +362,8 @@ export const redirectAfterLogin = (navigate) => {
   navigate(path);
 };
 
+
+
 // Handle OAuth callback
 export const handleOAuthCallback = async (navigate) => {
   const code = extractAuthCode();
@@ -433,6 +438,8 @@ export const handleOAuthCallback = async (navigate) => {
     };
   }
 };
+
+
 
 // Export default object with all functions
 export default {
