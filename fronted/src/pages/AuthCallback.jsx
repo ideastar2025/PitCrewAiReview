@@ -89,8 +89,8 @@ const AuthCallback = () => {
           throw new Error('No user data received from server');
         }
 
-        // Store authentication data
-        localStorage.setItem('token', data.token);
+        // Store authentication data - FIXED: Use correct key
+        localStorage.setItem('access_token', data.token);  // Changed from 'token'
         localStorage.setItem('user', JSON.stringify(data.user));
         console.log('Stored token and user data');
 
@@ -102,12 +102,14 @@ const AuthCallback = () => {
         // Get redirect path
         const redirectPath = sessionStorage.getItem('redirectAfterLogin') || '/dashboard';
         sessionStorage.removeItem('redirectAfterLogin');
+        sessionStorage.removeItem('auth_provider');
 
         console.log('Redirecting to:', redirectPath);
 
-        // Short delay for UX
+        // Short delay for UX, then navigate
         setTimeout(() => {
-          navigate(redirectPath, { replace: true });
+          // Force navigation with replace to prevent back button issues
+          window.location.href = redirectPath;
         }, 1000);
 
       } catch (err) {
@@ -124,7 +126,7 @@ const AuthCallback = () => {
   const handleRetry = () => {
     // Clear any stored data
     sessionStorage.clear();
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     
     // Redirect to login
