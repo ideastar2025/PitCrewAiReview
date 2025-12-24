@@ -19,33 +19,29 @@ def api_root(request):
         'message': 'Welcome to PitCrew AI Review API',
         'endpoints': {
             'health': '/health/',
-            'admin': '/dashboard/',
+            'admin': '/admin/',
+            'auth': {
+                'github_callback': '/api/auth/github/callback/',
+                'bitbucket_callback': '/api/auth/bitbucket/callback/',
+                'current_user': '/api/auth/me/',
+                'logout': '/api/auth/logout/',
+            },
             'api': {
-                'auth': '/api/auth/',
-                'repositories': '/api/repos/',
+                'repos': '/api/repos/',
                 'reviews': '/api/reviews/',
                 'webhooks': '/api/webhooks/',
             },
-            'docs': '/api/docs/',
-        }
+        },
+        'authentication': 'Token-based (Include "Authorization: Token YOUR_TOKEN" in headers)'
     })
 
 urlpatterns = [
-    # Admin
-    path('dashboard/', admin.site.urls),
-    
-    # Health check
+    path('admin/', admin.site.urls),
     path('health/', health_check, name='health_check'),
-    
-    # API root
     path('', api_root, name='api_root'),
-    
-    # API endpoints
     path('api/auth/', include('apps.auth_app.urls')),
     path('api/repos/', include('apps.repos.urls')),
     path('api/reviews/', include('apps.reviews.urls')),
     path('api/webhooks/', include('apps.webhooks.urls')),
-    
-    # REST Framework browsable API auth
     path('api-auth/', include('rest_framework.urls')),
 ]

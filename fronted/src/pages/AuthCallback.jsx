@@ -1,49 +1,134 @@
-// ============================================
-// AuthCallback.jsx
-// ============================================
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { handleOAuthCallback } from '../utlis/auth';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const AuthCallback = () => {
   const [status, setStatus] = useState('processing');
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const processCallback = async () => {
-      // Simulate progress for better UX
+      // Progress simulation
       const progressInterval = setInterval(() => {
         setProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
       try {
-        const result = await handleOAuthCallback(navigate);
+        // Extract OAuth parameters from URL
+        const params = new URLSearchParams(location.search);
+        const code = params.get('code');
+        const state = params.get('state');
+        const error = params.get('error');
+        const errorDescription = params.get('error_description');
 
+        console.log('OAuth Callback - Params:', { code: !!code, state: !!state, error });
+
+        // Check for OAuth errors
+        if (error) {
+          throw new Error(errorDescription || error || 'OAuth authentication failed');
+        }
+
+        // Validate code
+        if (!code) {
+          throw new Error('No authorization code received from provider');
+        }
+
+        // Validate state (CSRF protection)
+        const savedState = sessionStorage.getItem('oauth_state');
+        if (state && savedState && state !== savedState) {
+          throw new Error('Invalid state parameter. Possible CSRF attack.');
+        }
+
+        // Clear saved state
+        sessionStorage.removeItem('oauth_state');
+
+        // Determine provider
+        const provider = sessionStorage.getItem('auth_provider') || 'github';
+        console.log('Using provider:', provider);
+
+        // Get API URL from environment
+        const API_URL = import.meta.env?.VITE_API_URL || 
+                       process.env.REACT_APP_API_URL || 
+                       'http://localhost:8000';
+
+        console.log('API URL:', API_URL);
+
+        // Exchange code for token
+        const response = await fetch(`${API_URL}/api/auth/${provider}/callback/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ code }),
+        });
+
+        console.log('API Response status:', response.status);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('API Error:', errorData);
+          throw new Error(
+            errorData.error || 
+            errorData.detail || 
+            errorData.message ||
+            `Authentication failed with status ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+        console.log('Authentication successful');
+
+        // Validate response
+        if (!data.token) {
+          throw new Error('No authentication token received from server');
+        }
+
+        if (!data.user) {
+          throw new Error('No user data received from server');
+        }
+
+        // Store authentication data
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        console.log('Stored token and user data');
+
+        // Complete progress
         clearInterval(progressInterval);
         setProgress(100);
+        setStatus('success');
 
-        if (result.success) {
-          setStatus('success');
-          // Navigation is handled in handleOAuthCallback
-        } else {
-          setStatus('error');
-          setError(result.error);
-        }
+        // Get redirect path
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin') || '/dashboard';
+        sessionStorage.removeItem('redirectAfterLogin');
+
+        console.log('Redirecting to:', redirectPath);
+
+        // Short delay for UX
+        setTimeout(() => {
+          navigate(redirectPath, { replace: true });
+        }, 1000);
+
       } catch (err) {
         clearInterval(progressInterval);
-        console.error('Callback processing error:', err);
+        console.error('Authentication error:', err);
         setStatus('error');
-        setError(err.message || 'An unexpected error occurred');
+        setError(err.message || 'An unexpected error occurred during authentication');
       }
     };
 
     processCallback();
-  }, [navigate]);
+  }, [navigate, location]);
 
   const handleRetry = () => {
-    navigate('/');
+    // Clear any stored data
+    sessionStorage.clear();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // Redirect to login
+    navigate('/', { replace: true });
   };
 
   return (
@@ -126,8 +211,13 @@ const AuthCallback = () => {
             </button>
             
             <p className="text-xs text-gray-500 mt-4">
-              If the problem persists, please check your network connection or contact support
+              If the problem persists, please check:
             </p>
+            <ul className="text-xs text-gray-500 mt-2 space-y-1">
+              <li>• Your internet connection</li>
+              <li>• Browser settings and cookies</li>
+              <li>• Environment configuration</li>
+            </ul>
           </div>
         )}
       </div>

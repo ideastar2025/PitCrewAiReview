@@ -1,411 +1,379 @@
-// API Base Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// ============================================
+// Example 1: Dashboard Component
+// ============================================
 
-// Helper function to get auth token
-const getAuthToken = () => {
-  return localStorage.getItem('access_token');
-};
+import React, { useEffect, useState } from "react";
+import { reposAPI, handleApiError } from "../utils/api";
 
-// Helper function to create headers
-const createHeaders = (includeAuth = true) => {
-  const headers = {
-    'Content-Type': 'application/json',
+function Dashboard() {
+  const [repos, setRepos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadRepositories();
+  }, []);
+
+  const loadRepositories = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await reposAPI.getAll();
+      setRepos(data.repositories || []);
+    } catch (err) {
+      const errorMessage = handleApiError(err);
+      setError(errorMessage);
+      console.error("Failed to load repositories:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (includeAuth) {
-    const token = getAuthToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+  const handleSync = async (repoId) => {
+    try {
+      await reposAPI.sync(repoId);
+      alert("Repository sync started!");
+      loadRepositories(); // Reload list
+    } catch (err) {
+      alert(handleApiError(err));
     }
-  }
-
-  return headers;
-};
-
-// Generic API request handler
-const apiRequest = async (endpoint, options = {}) => {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const config = {
-    ...options,
-    headers: {
-      ...createHeaders(options.includeAuth !== false),
-      ...options.headers,
-    },
   };
 
+  if (loading) return <div>Loading repositories...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <div>
+      <h1>My Repositories</h1>
+      {repos.length === 0 ? (
+        <p>No repositories found. Connect a repository to get started.</p>
+      ) : (
+        <ul>
+          {repos.map((repo) => (
+            <li key={repo.id}>
+              {repo.name}
+              <button onClick={() => handleSync(repo.id)}>Sync</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// Example 2: Login Component
+// ============================================
+
+import React, { useState } from "react";
+import { authAPI, handleApiError } from "../utils/api";
+import { initSession } from "../utils/auth";
+import { useNavigate } from "react-router-dom";
+
+function TestLogin() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await authAPI.loginWithCredentials(username, password);
+
+      // Initialize session
+      initSession(response.token, response.user);
+
+      // Redirect to dashboard
+      navigate("/dashboard");
+    } catch (err) {
+      setError(handleApiError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2>Test Login</h2>
+      {error && <div className="error">{error}</div>}
+
+      <input
+        type="text"
+        placeholder="Username"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        required
+      />
+
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+
+      <button type="submit" disabled={loading}>
+        {loading ? "Logging in..." : "Login"}
+      </button>
+    </form>
+  );
+}
+
+// ============================================
+// Example 3: Auth Callback Handler
+// ============================================
+
+import React, { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { authAPI, handleApiError } from "../utils/api";
+import { initSession } from "../utils/auth";
+
+function AuthCallback() {
+  const [status, setStatus] = useState("processing");
+  const [error, setError] = useState(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    handleCallback();
+  }, []);
+
+  const handleCallback = async () => {
+    const code = searchParams.get("code");
+    const provider = searchParams.get("provider") || "github";
+    const errorParam = searchParams.get("error");
+
+    if (errorParam) {
+      setStatus("error");
+      setError(`OAuth error: ${errorParam}`);
+      return;
+    }
+
+    if (!code) {
+      setStatus("error");
+      setError("No authorization code received");
+      return;
+    }
+
+    try {
+      // Call the appropriate callback based on provider
+      const response =
+        provider === "github"
+          ? await authAPI.githubCallback(code)
+          : await authAPI.bitbucketCallback(code);
+
+      // Initialize session
+      initSession(response.token, response.user, provider);
+
+      setStatus("success");
+
+      // Redirect to dashboard
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
+    } catch (err) {
+      console.error("Auth callback error:", err);
+      setStatus("error");
+      setError(handleApiError(err));
+    }
+  };
+
+  return (
+    <div>
+      {status === "processing" && <div>Authenticating...</div>}
+      {status === "success" && <div>Success! Redirecting...</div>}
+      {status === "error" && (
+        <div>
+          <div>Authentication failed: {error}</div>
+          <button onClick={() => navigate("/")}>Try Again</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// Example 4: Reviews List Component
+// ============================================
+
+import React, { useEffect, useState } from "react";
+import { reviewsAPI, handleApiError } from "../utils/api";
+
+function ReviewsList() {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filters, setFilters] = useState({
+    status: "",
+    repo_id: "",
+  });
+
+  useEffect(() => {
+    loadReviews();
+  }, [filters]);
+
+  const loadReviews = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Only include non-empty filters
+      const activeFilters = Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== "")
+      );
+
+      const data = await reviewsAPI.getAll(activeFilters);
+      setReviews(data.reviews || data.results || []);
+    } catch (err) {
+      setError(handleApiError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const triggerReview = async (prId) => {
+    try {
+      await reviewsAPI.triggerReview(prId);
+      alert("Review triggered successfully!");
+      loadReviews(); // Reload list
+    } catch (err) {
+      alert(handleApiError(err));
+    }
+  };
+
+  if (loading) return <div>Loading reviews...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <div>
+      <h1>Code Reviews</h1>
+
+      {/* Filters */}
+      <div>
+        <select
+          value={filters.status}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+        >
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="changes_requested">Changes Requested</option>
+        </select>
+      </div>
+
+      {/* Reviews List */}
+      {reviews.length === 0 ? (
+        <p>No reviews found</p>
+      ) : (
+        <ul>
+          {reviews.map((review) => (
+            <li key={review.id}>
+              <h3>{review.title}</h3>
+              <p>Status: {review.status}</p>
+              <button onClick={() => triggerReview(review.pull_request_id)}>
+                Trigger AI Review
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// Example 5: Using the generic api object
+// ============================================
+
+import { api, handleApiError } from "../utils/api";
+
+// GET request
+async function fetchData() {
   try {
-    const response = await fetch(url, config);
-
-    // Handle non-JSON responses
-    const contentType = response.headers.get('content-type');
-    const isJson = contentType && contentType.includes('application/json');
-
-    if (!response.ok) {
-      const error = isJson ? await response.json() : { message: response.statusText };
-      
-      // Handle 401 Unauthorized - token expired or invalid
-      if (response.status === 401) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      throw new Error(error.message || error.detail || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return isJson ? await response.json() : await response.text();
-  } catch (error) {
-    console.error(`API Request failed: ${endpoint}`, error);
-    throw error;
+    const data = await api.get("/api/repos/repositories/");
+    console.log("Repositories:", data);
+  } catch (err) {
+    console.error(handleApiError(err));
   }
-};
+}
 
-// ============================================
-// Authentication API
-// ============================================
-
-export const login = async (provider) => {
-  // Redirect to OAuth flow
-  const clientId = provider === 'github'
-    ? import.meta.env.VITE_GITHUB_CLIENT_ID || import.meta.env.REACT_APP_GITHUB_CLIENT_ID
-    : import.meta.env.VITE_BITBUCKET_CLIENT_ID || import.meta.env.REACT_APP_BITBUCKET_CLIENT_ID;
-
-  const redirectUri = `${window.location.origin}/auth/callback`;
-  const authUrl = provider === 'github'
-    ? `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo`
-    : `https://bitbucket.org/site/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}`;
-
-  window.location.href = authUrl;
-};
-
-export const handleAuthCallback = async (code, provider) => {
-  return apiRequest('/auth/callback/', {
-    method: 'POST',
-    body: JSON.stringify({ code, provider }),
-    includeAuth: false,
-  });
-};
-
-export const logout = async () => {
+// POST request
+async function createRepository(repoData) {
   try {
-    await apiRequest('/auth/logout/', {
-      method: 'POST',
-    });
-  } finally {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
+    const result = await api.post("/api/repos/repositories/", repoData);
+    console.log("Created:", result);
+  } catch (err) {
+    console.error(handleApiError(err));
   }
-};
+}
 
-export const getCurrentUser = async () => {
-  return apiRequest('/auth/me/');
-};
+// PATCH request
+async function updateRepository(repoId, updates) {
+  try {
+    const result = await api.patch(
+      `/api/repos/repositories/${repoId}/`,
+      updates
+    );
+    console.log("Updated:", result);
+  } catch (err) {
+    console.error(handleApiError(err));
+  }
+}
 
-// ============================================
-// Dashboard API
-// ============================================
-
-export const getDashboard = async () => {
-  return apiRequest('/pull-requests/dashboard/');
-};
-
-export const getDashboardStats = async (timeRange = '7d') => {
-  return apiRequest(`/analytics/stats/?range=${timeRange}`);
-};
-
-// ============================================
-// Repository API
-// ============================================
-
-export const getRepos = async () => {
-  return apiRequest('/repositories/');
-};
-
-export const getAvailableRepos = async (provider = 'github') => {
-  return apiRequest(`/repositories/available/?provider=${provider}`);
-};
-
-export const connectRepo = async (repoId) => {
-  return apiRequest('/repositories/', {
-    method: 'POST',
-    body: JSON.stringify({ repo_id: repoId }),
-  });
-};
-
-export const disconnectRepo = async (repoId) => {
-  return apiRequest(`/repositories/${repoId}/`, {
-    method: 'DELETE',
-  });
-};
-
-export const syncRepo = async (repoId) => {
-  return apiRequest(`/repositories/${repoId}/sync/`, {
-    method: 'POST',
-  });
-};
+// DELETE request
+async function deleteRepository(repoId) {
+  try {
+    await api.delete(`/api/repos/repositories/${repoId}/`);
+    console.log("Deleted successfully");
+  } catch (err) {
+    console.error(handleApiError(err));
+  }
+}
 
 // ============================================
-// Pull Request API
+// Example 6: Protected Route Component
 // ============================================
 
-export const getPullRequests = async (filters = {}) => {
-  const params = new URLSearchParams(filters).toString();
-  return apiRequest(`/pull-requests/?${params}`);
-};
+import React, { useEffect } from "react";
+import { Navigate } from "react-router-dom";
+import { isAuthenticated } from "../utils/auth";
 
-export const getPullRequest = async (prId) => {
-  return apiRequest(`/pull-requests/${prId}/`);
-};
+function ProtectedRoute({ children }) {
+  const authenticated = isAuthenticated();
 
-export const getPRReview = async (prId) => {
-  return apiRequest(`/pull-requests/${prId}/review/`);
-};
-
-export const approvePR = async (prId) => {
-  return apiRequest(`/pull-requests/${prId}/approve/`, {
-    method: 'POST',
-  });
-};
-
-export const requestChanges = async (prId, comments) => {
-  return apiRequest(`/pull-requests/${prId}/request-changes/`, {
-    method: 'POST',
-    body: JSON.stringify({ comments }),
-  });
-};
-
-export const triggerAnalysis = async (prId) => {
-  return apiRequest(`/pull-requests/${prId}/analyze/`, {
-    method: 'POST',
-  });
-};
-
-// ============================================
-// Analytics API
-// ============================================
-
-export const getAnalytics = async (timeRange = '30d') => {
-  return apiRequest(`/analytics/?range=${timeRange}`);
-};
-
-export const getTeamMetrics = async () => {
-  return apiRequest('/analytics/team/');
-};
-
-export const getRiskTrends = async (repoId = null) => {
-  const params = repoId ? `?repo_id=${repoId}` : '';
-  return apiRequest(`/analytics/risk-trends/${params}`);
-};
-
-// ============================================
-// Settings API
-// ============================================
-
-export const getSettings = async () => {
-  return apiRequest('/settings/');
-};
-
-export const updateSettings = async (settings) => {
-  return apiRequest('/settings/', {
-    method: 'PATCH',
-    body: JSON.stringify(settings),
-  });
-};
-
-export const updateNotificationSettings = async (notifications) => {
-  return apiRequest('/settings/notifications/', {
-    method: 'PATCH',
-    body: JSON.stringify(notifications),
-  });
-};
-
-// ============================================
-// Webhooks API
-// ============================================
-
-export const getWebhooks = async () => {
-  return apiRequest('/webhooks/');
-};
-
-export const createWebhook = async (repoId, events) => {
-  return apiRequest('/webhooks/', {
-    method: 'POST',
-    body: JSON.stringify({ repo_id: repoId, events }),
-  });
-};
-
-export const deleteWebhook = async (webhookId) => {
-  return apiRequest(`/webhooks/${webhookId}/`, {
-    method: 'DELETE',
-  });
-};
-
-// ============================================
-// Export Reports API
-// ============================================
-
-export const exportReport = async (format = 'pdf', filters = {}) => {
-  const params = new URLSearchParams({ format, ...filters }).toString();
-  const url = `${API_BASE_URL}/reports/export/?${params}`;
-  
-  const token = getAuthToken();
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    throw new Error('Failed to export report');
+  if (!authenticated) {
+    // Redirect to login if not authenticated
+    return <Navigate to="/" replace />;
   }
 
-  // Download file
-  const blob = await response.blob();
-  const downloadUrl = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = downloadUrl;
-  link.download = `pitcrew-report-${Date.now()}.${format}`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(downloadUrl);
-};
+  return children;
+}
 
-// ============================================
-// File Upload API
-// ============================================
+// Usage in Router:
+// <Route
+//   path="/dashboard"
+//   element={
+//     <ProtectedRoute>
+//       <Dashboard />
+//     </ProtectedRoute>
+//   }
+// />
 
-export const uploadFile = async (file, type = 'avatar') => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('type', type);
-
-  const token = getAuthToken();
-  const response = await fetch(`${API_BASE_URL}/upload/`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    throw new Error('Failed to upload file');
-  }
-
-  return response.json();
-};
-
-// ============================================
-// Error Handler for components
-// ============================================
-
-export const handleApiError = (error) => {
-  if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-    // Token expired or invalid - redirect to login
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
-  }
-  
-  // Return user-friendly error message
-  if (error.message.includes('Network')) {
-    return 'Network error. Please check your connection.';
-  }
-  
-  if (error.message.includes('500')) {
-    return 'Server error. Please try again later.';
-  }
-  
-  return error.message || 'Something went wrong';
-};
-
-// ============================================
-// Axios-style API instance (for compatibility)
-// ============================================
-
-// Create an axios-like API object for easy migration
-export const api = {
-  get: (url, config = {}) => apiRequest(url, { method: 'GET', ...config }),
-  post: (url, data, config = {}) => apiRequest(url, { 
-    method: 'POST', 
-    body: JSON.stringify(data),
-    ...config 
-  }),
-  put: (url, data, config = {}) => apiRequest(url, { 
-    method: 'PUT', 
-    body: JSON.stringify(data),
-    ...config 
-  }),
-  patch: (url, data, config = {}) => apiRequest(url, { 
-    method: 'PATCH', 
-    body: JSON.stringify(data),
-    ...config 
-  }),
-  delete: (url, config = {}) => apiRequest(url, { method: 'DELETE', ...config }),
-};
-
-export default {
-  // Auth
-  login,
-  logout,
-  handleAuthCallback,
-  getCurrentUser,
-  
-  // Dashboard
-  getDashboard,
-  getDashboardStats,
-  
-  // Repositories
-  getRepos,
-  getAvailableRepos,
-  connectRepo,
-  disconnectRepo,
-  syncRepo,
-  
-  // Pull Requests
-  getPullRequests,
-  getPullRequest,
-  getPRReview,
-  approvePR,
-  requestChanges,
-  triggerAnalysis,
-  
-  // Analytics
-  getAnalytics,
-  getTeamMetrics,
-  getRiskTrends,
-  
-  // Settings
-  getSettings,
-  updateSettings,
-  updateNotificationSettings,
-  
-  // Webhooks
-  getWebhooks,
-  createWebhook,
-  deleteWebhook,
-  
-  // Reports
-  exportReport,
-  
-  // Upload
-  uploadFile,
-  
-  // Error handling
-  handleApiError,
-  
-  // Axios-style API
-  api,
+export {
+  Dashboard,
+  TestLogin,
+  AuthCallback,
+  ReviewsList,
+  ProtectedRoute,
+  fetchData,
+  createRepository,
+  updateRepository,
+  deleteRepository,
 };
